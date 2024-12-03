@@ -18,3 +18,10 @@ impl Puzzle for Day00 {
         todo!("implement part two")
     }
 }
+
+#[test]
+fn sample_day00_1() {
+    let input = r#"
+"#;
+    println!("{:?}", Day00.part_one(input).unwrap());
+}
