@@ -10,8 +10,9 @@ pub struct Client {
     pub client: AocClient,
     pub assignment_path: PathBuf,
     pub input_path: PathBuf,
-    pub _year: i32,
-    pub day: u32,
+    pub year: u16,
+    pub day: u8,
+    pub part: u8,
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -42,11 +43,13 @@ impl Client {
             client,
             assignment_path,
             input_path,
-            _year: opt.year as i32,
-            day: opt.day as u32,
+            year: opt.year,
+            day: opt.day,
+            part: opt.part,
         })
     }
 
+    /// Download the assignment and input data
     pub fn download(&self) -> Result<(), Error> {
         if !self.assignment_path.exists() {
             self.client.save_puzzle_markdown()?;
@@ -57,6 +60,23 @@ impl Client {
             std::fs::write(format!("./input/day{:02}.txt", self.day), input)?;
         }
         Ok(())
+    }
+    pub fn ensure_ready(&self, day: u8) -> Result<(), Error> {
+        if !solution_path(day).exists() {
+            let downloader = DownloadCommand { force: false };
+            let dl_opt = RootOpt {
+                year: self.year,
+                day: self.day,
+                part: self.part,
+                data: false,
+                command: None,
+            };
+            log::warn!("Since a new code-file was created, you may need to restart your language-server / restart your watch command!");
+            return downloader.run(&dl_opt);
+        } else {
+            // ensure both assignment & input are present even if the code-file was present
+            return self.download();
+        }
     }
 
     /// Delete downloaded files
@@ -72,14 +92,16 @@ impl Client {
     }
 
     /// Get the input for the day. If the input file doesn't exist, download it.
-    pub fn get_input(&self) -> Result<String, Error> {
-        if !self.input_path.exists() {
-            self.download()?;
-        }
+    pub fn get_input(&self, day: u8) -> Result<String, Error> {
+        self.ensure_ready(day)?;
 
         let input = std::fs::read_to_string(&self.input_path)?;
         Ok(input)
     }
+}
+
+fn solution_path(day: u8) -> PathBuf {
+    PathBuf::from(format!("src/puzzle/day_{:02}.rs", day))
 }
 
 impl DownloadCommand {
@@ -98,7 +120,7 @@ impl DownloadCommand {
 
     fn create_solution_file(day: u8) -> Result<(), Error> {
         let template_path = PathBuf::from("src/puzzle/day_00.rs");
-        let path = PathBuf::from(format!("src/puzzle/day_{:02}.rs", day));
+        let path = solution_path(day);
 
         if std::fs::exists(&path)? {
             log::info!("Puzzle file exists at {:?}", path);
@@ -108,9 +130,11 @@ impl DownloadCommand {
         // hackity hack - relies on very specific file layout in template
         log::info!("Creating puzzle file at {:?}", path);
         let day_text = format!("Day{:02}", day);
+        let day_lower = day_text.to_lowercase();
         let data: String = String::from_utf8(std::fs::read(template_path)?)?
             // replace type name with specific day
             .replace("Day00", &day_text)
+            .replace("day00", &day_lower)
             .lines()
             // remove the two comment lines at the top of the file
             .skip(2)

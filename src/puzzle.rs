@@ -35,7 +35,7 @@ impl PuzzleCommand {
             std::io::stdin().read_to_string(&mut data)?;
             data
         } else {
-            client.get_input()?
+            client.get_input(opt.day)?
         };
 
         let day = get_solution!(opt);

@@ -16,11 +16,11 @@ pub struct RootOpt {
     pub year: u16,
 
     /// Day to run
-    #[arg(short, long)]
+    #[arg(short, long, default_value_t = 1, value_parser = clap::value_parser!(u8).range(1..=31))]
     pub day: u8,
 
     /// Part to run
-    #[arg(short, long, default_value_t = 1)]
+    #[arg(short, long, default_value_t = 1, value_parser = clap::value_parser!(u8).range(1..=2))]
     pub part: u8,
 
     /// Read data from stdin instead of file
