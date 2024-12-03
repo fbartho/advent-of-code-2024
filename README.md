@@ -1,6 +1,6 @@
 # AdventOfCode 2024
 
-[AdventOfCode.com](AdventOfCode.com) is a fun little yearly coding challenge. The problems start generally approachable, but were designed by people with twisty minds, and naive solutions can run into challenges. People can use this to learn a new programming language, or to flex their skills on their daily language. It's a fun way to form a community among developers.
+[AdventOfCode.com](https://AdventOfCode.com) is a fun little yearly coding challenge. The problems start generally approachable, but were designed by people with twisty minds, and naive solutions can run into challenges. People can use this to learn a new programming language, or to flex their skills on their daily language. It's a fun way to form a community among developers.
 
 Stack:
 - Rust
@@ -18,7 +18,7 @@ Stack:
 
 - `cargo run -- -d1 -p1 download`
 - `cargo run -- -d1 -p1 puzzle`
-- `cargo watch -x "run -- -d01 -p1 puzzle"`
+- `RUST_LOG=info RUST_BACKTRACE=1 cargo watch -x "run -- -d1 -p1 puzzle"`
 - `cargo run -- -d1 -p1 puzzle --submit`
 
 ### Authentication
