@@ -5,9 +5,11 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.93"
-clap = { version = "4.5.21", features = ["derive"] }
 aoc-client = "*"
+clap = { version = "4.5.21", features = ["derive"] }
+env_logger = "0.11.5"
 log = "0.4.22"
 macros = { path = "macros" }
-env_logger = "0.11.5"
 itertools = "0.13.0"
+nom = "7.1.3"
+nom-supreme = "0.8.0"
