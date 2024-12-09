@@ -105,10 +105,25 @@ impl Document {
 		let mut previous: std::collections::VecDeque<DataType>;
 		while let Some(entry) = remaining.pop_front() {
 			previous = candidate.clone();
-			candidate.push_back(entry);
-			if !Document::verify_vecdeque(&candidate, constraints) {
-				candidate = previous;
-				remaining.push_back(entry);
+
+			let mut failed = false;
+			for idx in (0..=previous.len()).rev() {
+				candidate.insert(idx, entry);
+
+				if Document::verify_vecdeque(&candidate, constraints) {
+					failed = false;
+					break;
+				} else {
+					// reset ourselves
+					candidate = previous.clone();
+					failed = true;
+				}
+			}
+			if failed {
+				panic!(
+					"No solution found for {:?} {:?} {:?}",
+					update, entry, candidate
+				);
 			}
 		}
 		return candidate.iter().map(|e| *e).collect::<Vec<DataType>>();
