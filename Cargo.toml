@@ -3,9 +3,19 @@ name = "advent2024"
 version = "0.1.0"
 edition = "2021"
 
+[features]
+default = ["serde"]
+serde = ["dep:serde"]
+
 [dependencies]
+ariadne = "0.2.0"
 anyhow = "1.0.93"
 aoc-client = "*"
+chumsky = { git = "https://github.com/zesterer/chumsky.git", features = [
+	"std",
+	"stacker",
+	"serde",
+] }
 clap = { version = "4.5.21", features = ["derive"] }
 env_logger = "0.11.5"
 grid = "0.15.0"
@@ -14,5 +24,8 @@ macros = { path = "macros" }
 itertools = "0.13.0"
 nom = "7.1.3"
 nom-supreme = "0.8.0"
+serde = { version = "1.0", default-features = true, optional = true, features = [
+	"derive",
+] }
 strum = "0.26"
 strum_macros = "0.26"
