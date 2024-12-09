@@ -67,18 +67,21 @@ enum CellValue {
     S,
 }
 impl CellValue {
-    // static
     fn search_seq_xmas() -> Vec<CellValue> {
         const NEEDLE: [CellValue; 4] = [CellValue::X, CellValue::M, CellValue::A, CellValue::S];
-        NEEDLE.iter().map(|v| v.clone()).collect()
-    }
-    fn search_seq_mas() -> Vec<CellValue> {
-        const NEEDLE: [CellValue; 3] = [CellValue::M, CellValue::A, CellValue::S];
         NEEDLE.iter().map(|v| v.clone()).collect()
     }
 }
 /// (y, x) to match with grid crate
 type GridCoord2 = (usize, usize);
+#[derive(Clone)]
+struct CrossCoordTray {
+    top_left: GridCoord2,
+    top_right: GridCoord2,
+    mid: GridCoord2,
+    bottom_left: GridCoord2,
+    bottom_right: GridCoord2,
+}
 #[derive(Clone)]
 struct FBGrid<T>
 where
@@ -95,9 +98,9 @@ where
             .indexed_iter()
             .filter(move |(_, val)| **val == needle)
     }
-    fn is_valid_coord(&self, (y, x): GridCoord2) -> bool {
-        return (0..self.grid.rows()).contains(&y) && (0..self.grid.cols()).contains(&x);
-    }
+    // fn is_valid_coord(&self, (y, x): GridCoord2) -> bool {
+    //     return (0..self.grid.rows()).contains(&y) && (0..self.grid.cols()).contains(&x);
+    // }
 }
 type DirectedPath = (TravelDirection, Vec<GridCoord2>);
 impl FBGrid<CellValue> {
@@ -167,137 +170,141 @@ impl FBGrid<CellValue> {
             TravelDirection::all(),
         )
     }
-    /// Vertically Stacked 'M's + to the right
-    fn x_east(
+    fn check_cross(
         &self,
-        head: GridCoord2,
-        tail_coords: &std::collections::HashSet<GridCoord2>,
-    ) -> Option<Vec<DirectedPath>> {
-        let south_two = TravelDirection::S.next_coord_with_dist(head, 2)?;
-        let mid = TravelDirection::E
-            .next_coord_with_dist(TravelDirection::S.next_coord_with_dist(head, 1)?, 1)?;
-        let east_two = TravelDirection::E.next_coord_with_dist(head, 2)?;
-        let south_two_east_two = TravelDirection::E.next_coord_with_dist(south_two, 2)?;
-        if self.grid.get(mid.0, mid.1).unwrap_or(&CellValue::Unknown) != &CellValue::A {
+        mid: GridCoord2,
+        template: &Vec<CellValue>,
+    ) -> Option<(CrossCoordTray, bool)> {
+        let top_left = TravelDirection::NW.next_coord_with_dist(mid, 1)?;
+        let top_right = TravelDirection::NE.next_coord_with_dist(mid, 1)?;
+        let bottom_left = TravelDirection::SW.next_coord_with_dist(mid, 1)?;
+        let bottom_right = TravelDirection::SE.next_coord_with_dist(mid, 1)?;
+        let coords = CrossCoordTray {
+            top_left,
+            top_right,
+            mid,
+            bottom_left,
+            bottom_right,
+        };
+
+        let current_coords: Vec<GridCoord2> = vec![top_left, top_right, bottom_left, bottom_right];
+        let current_vals: Vec<&CellValue> = current_coords
+            .iter()
+            .filter_map(|c| self.grid.get(c.0, c.1))
+            .collect();
+        if current_vals.len() != template.len() {
+            return Some((coords, false));
+        }
+        return Some((
+            coords,
+            std::iter::zip(current_vals, template).all(|(a, b)| a == b),
+        ));
+    }
+    /// Vertically Stacked 'M's + to the right
+    fn x_east(&self, mid: GridCoord2) -> Option<Vec<DirectedPath>> {
+        let (coords, valid) = self.check_cross(
+            mid,
+            &vec![CellValue::M, CellValue::S, CellValue::M, CellValue::S],
+        )?;
+        if !valid {
             return None;
         }
-        if tail_coords.contains(&east_two) && tail_coords.contains(&south_two_east_two) {
-            return Some(vec![
-                (TravelDirection::SE, vec![head, mid, south_two_east_two]),
-                (TravelDirection::NE, vec![south_two, mid, east_two]),
-            ]);
-        }
-        return None;
+        return Some(vec![
+            (
+                TravelDirection::SE,
+                vec![coords.top_left, coords.mid, coords.bottom_right],
+            ),
+            (
+                TravelDirection::NE,
+                vec![coords.bottom_left, coords.mid, coords.top_right],
+            ),
+        ]);
     }
     /// Vertically Stacked 'M's + to the left
-    fn x_west(
-        &self,
-        head: GridCoord2,
-        tail_coords: &std::collections::HashSet<GridCoord2>,
-    ) -> Option<Vec<DirectedPath>> {
-        let south_two = TravelDirection::S.next_coord_with_dist(head, 2)?;
-        let mid = TravelDirection::W
-            .next_coord_with_dist(TravelDirection::S.next_coord_with_dist(head, 1)?, 1)?;
-        let west_two = TravelDirection::W.next_coord_with_dist(head, 2)?;
-        let south_two_west_two = TravelDirection::W.next_coord_with_dist(south_two, 2)?;
-
-        if self.grid.get(mid.0, mid.1).unwrap_or(&CellValue::Unknown) != &CellValue::A {
+    fn x_west(&self, mid: GridCoord2) -> Option<Vec<DirectedPath>> {
+        let (coords, valid) = self.check_cross(
+            mid,
+            &vec![CellValue::S, CellValue::M, CellValue::S, CellValue::M],
+        )?;
+        if !valid {
             return None;
         }
-        if tail_coords.contains(&west_two) && tail_coords.contains(&south_two_west_two) {
-            return Some(vec![
-                (TravelDirection::SW, vec![head, mid, south_two_west_two]),
-                (TravelDirection::NW, vec![south_two, mid, west_two]),
-            ]);
-        }
-        return None;
+        return Some(vec![
+            (
+                TravelDirection::SW,
+                vec![coords.top_right, coords.mid, coords.bottom_left],
+            ),
+            (
+                TravelDirection::NW,
+                vec![coords.bottom_right, coords.mid, coords.top_left],
+            ),
+        ]);
     }
     /// Horizontal 'M's + going down
-    fn x_south(
-        &self,
-        head: GridCoord2,
-        tail_coords: &std::collections::HashSet<GridCoord2>,
-    ) -> Option<Vec<DirectedPath>> {
-        let east_two = TravelDirection::E.next_coord_with_dist(head, 2)?;
-        let mid = TravelDirection::S
-            .next_coord_with_dist(TravelDirection::E.next_coord_with_dist(head, 1)?, 1)?;
-        let south_two = TravelDirection::S.next_coord_with_dist(head, 2)?;
-        let east_two_south_two = TravelDirection::S.next_coord_with_dist(east_two, 2)?;
-
-        if self.grid.get(mid.0, mid.1).unwrap_or(&CellValue::Unknown) != &CellValue::A {
+    fn x_south(&self, mid: GridCoord2) -> Option<Vec<DirectedPath>> {
+        let (coords, valid) = self.check_cross(
+            mid,
+            &vec![CellValue::M, CellValue::M, CellValue::S, CellValue::S],
+        )?;
+        if !valid {
             return None;
         }
-        if tail_coords.contains(&south_two) && tail_coords.contains(&east_two_south_two) {
-            return Some(vec![
-                (TravelDirection::SE, vec![head, mid, east_two_south_two]),
-                (TravelDirection::SW, vec![east_two, mid, south_two]),
-            ]);
-        }
-        return None;
+        return Some(vec![
+            (
+                TravelDirection::SE,
+                vec![coords.top_left, coords.mid, coords.bottom_right],
+            ),
+            (
+                TravelDirection::SW,
+                vec![coords.top_right, coords.mid, coords.bottom_left],
+            ),
+        ]);
     }
     /// Horizontal 'M's + going up
-    fn x_north(
-        &self,
-        head: GridCoord2,
-        tail_coords: &std::collections::HashSet<GridCoord2>,
-    ) -> Option<Vec<DirectedPath>> {
-        let east_two = TravelDirection::E.next_coord_with_dist(head, 2)?;
-        let mid = TravelDirection::E
-            .next_coord_with_dist(TravelDirection::N.next_coord_with_dist(head, 1)?, 1)?;
-        let north_two = TravelDirection::N.next_coord_with_dist(head, 2)?;
-        let east_two_north_two = TravelDirection::N.next_coord_with_dist(east_two, 2)?;
-        if self.grid.get(mid.0, mid.1).unwrap_or(&CellValue::Unknown) != &CellValue::A {
+    fn x_north(&self, mid: GridCoord2) -> Option<Vec<DirectedPath>> {
+        let (coords, valid) = self.check_cross(
+            mid,
+            &vec![CellValue::S, CellValue::S, CellValue::M, CellValue::M],
+        )?;
+        if !valid {
             return None;
         }
-        if tail_coords.contains(&north_two) && tail_coords.contains(&east_two_north_two) {
-            return Some(vec![
-                (TravelDirection::NE, vec![head, mid, east_two_north_two]),
-                (TravelDirection::NW, vec![east_two, mid, north_two]),
-            ]);
-        }
-        return None;
+        return Some(vec![
+            (
+                TravelDirection::NE,
+                vec![coords.bottom_left, coords.mid, coords.top_right],
+            ),
+            (
+                TravelDirection::NW,
+                vec![coords.bottom_right, coords.mid, coords.top_left],
+            ),
+        ]);
     }
     fn valid_cross_plans(&self) -> Vec<Vec<DirectedPath>> {
-        let mas_paths = self.valid_plans_for_directions(
-            self.find_iter(CellValue::M).map(|(start, _)| start),
-            CellValue::search_seq_mas(),
-            TravelDirection::cross(),
-        );
-        let heads_tails: Vec<(GridCoord2, GridCoord2)> = mas_paths
-            .iter()
-            .map(|path| (path.1[0], path.1[2]))
-            .collect();
-        let head_coords: std::collections::HashSet<GridCoord2> =
-            heads_tails.iter().map(|(head, _)| *head).collect();
-        let tail_coords: std::collections::HashSet<GridCoord2> =
-            heads_tails.iter().map(|(_, tail)| *tail).collect();
+        let mid_points = self.find_iter(CellValue::A).map(|(start, _)| start);
 
-        let head_vals = dbg!(head_coords
-            .iter()
-            .map(|c| self.grid[*c].to_string())
-            .collect::<Vec<_>>()
-            .join(""));
-        let tail_vals = dbg!(tail_coords
-            .iter()
-            .map(|c| self.grid[*c].to_string())
-            .collect::<Vec<_>>()
-            .join(""));
-        // Cross types
-        let cross_plans = head_coords
-            .iter()
-            .map(|head| {
-                let tmp: Vec<DirectedPath> = vec![
-                    self.x_east(*head, &tail_coords),
-                    self.x_west(*head, &tail_coords),
-                    self.x_north(*head, &tail_coords),
-                    self.x_south(*head, &tail_coords),
+        let cross_plans = mid_points
+            .map(|mid| {
+                let tmp: Vec<Vec<DirectedPath>> = vec![
+                    self.x_east(mid),
+                    self.x_west(mid),
+                    self.x_north(mid),
+                    self.x_south(mid),
                 ]
                 .iter()
-                .filter_map(|o| o.clone())
-                .flatten()
+                .filter_map(|o| {
+                    o.clone().map(|entry| {
+                        if entry.is_empty() {
+                            return None;
+                        }
+                        return Some(entry);
+                    })
+                })
+                .filter_map(|o| o)
                 .collect();
                 return tmp;
             })
+            .flatten()
             .collect();
         return cross_plans;
     }
@@ -345,24 +352,24 @@ impl TravelDirection {
     fn all() -> Vec<TravelDirection> {
         TravelDirection::iter().collect()
     }
-    fn cardinal() -> Vec<TravelDirection> {
-        const CARDINAL_PLAN: [TravelDirection; 4] = [
-            TravelDirection::N,
-            TravelDirection::E,
-            TravelDirection::S,
-            TravelDirection::W,
-        ];
-        Vec::from(CARDINAL_PLAN)
-    }
-    fn cross() -> Vec<TravelDirection> {
-        const CROSS_PLAN: [TravelDirection; 4] = [
-            TravelDirection::NE,
-            TravelDirection::SE,
-            TravelDirection::SW,
-            TravelDirection::NE,
-        ];
-        Vec::from(CROSS_PLAN)
-    }
+    // fn cardinal() -> Vec<TravelDirection> {
+    //     const CARDINAL_PLAN: [TravelDirection; 4] = [
+    //         TravelDirection::N,
+    //         TravelDirection::E,
+    //         TravelDirection::S,
+    //         TravelDirection::W,
+    //     ];
+    //     Vec::from(CARDINAL_PLAN)
+    // }
+    // fn cross() -> Vec<TravelDirection> {
+    //     const CROSS_PLAN: [TravelDirection; 4] = [
+    //         TravelDirection::NE,
+    //         TravelDirection::SE,
+    //         TravelDirection::SW,
+    //         TravelDirection::NE,
+    //     ];
+    //     Vec::from(CROSS_PLAN)
+    // }
     // fn next_coord_unchecked(&self, (y, x): GridCoord2) -> GridCoord2 {
     //     match self {
     //         Self::N => (y - 1, x),
