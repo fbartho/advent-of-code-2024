@@ -2,6 +2,7 @@
 use crate::prelude::*;
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::prelude::*;
+use std::borrow::Borrow;
 use std::borrow::Cow;
 #[allow(unused_imports)]
 use std::str::FromStr;
@@ -24,7 +25,7 @@ impl Puzzle for Day07 {
 		);
 		let solvable_equations: Vec<&TestEquation> = equation_list
 			.iter()
-			.filter(|eq| eq.is_solvable_recursive())
+			.filter(|eq| eq.is_solvable_recursive(false))
 			.collect();
 		let _ = dbg!(solvable_equations.len());
 		println!(
@@ -42,7 +43,28 @@ impl Puzzle for Day07 {
 	}
 
 	fn part_two(&self, _input: &str) -> super::PuzzleResult {
-		todo!("implement part two")
+		let equation_list = parse(_input);
+		println!(
+			"{}",
+			equation_list.iter().map(|eq| eq.to_string()).join("\n")
+		);
+		let solvable_equations: Vec<&TestEquation> = equation_list
+			.iter()
+			.filter(|eq| eq.is_solvable_recursive(true))
+			.collect();
+		let _ = dbg!(solvable_equations.len());
+		println!(
+			"{}",
+			solvable_equations
+				.iter()
+				.map(|eq| eq.to_string())
+				.join("\n")
+		);
+		return Ok(solvable_equations
+			.iter()
+			.map(|eq| eq.result)
+			.sum::<DataType>()
+			.to_string());
 	}
 }
 type DataType = u64;
@@ -54,6 +76,8 @@ enum Operator {
 	Mul,
 	#[strum(serialize = "/")]
 	Divide,
+	#[strum(serialize = "||")]
+	Concat,
 }
 impl Operator {
 	fn apply(&self, a: DataType, b: &DataType) -> DataType {
@@ -61,8 +85,14 @@ impl Operator {
 			Operator::Add => a + b,
 			Operator::Mul => a * b,
 			Operator::Divide => a / b,
+			Operator::Concat => concat_numeric_op(a, *b),
 		}
 	}
+}
+fn concat_numeric_op(a: DataType, b: DataType) -> DataType {
+	(a.to_string() + &b.to_string())
+		.parse::<DataType>()
+		.unwrap()
 }
 struct TestEquation<'a> {
 	/// Expected Result
@@ -141,12 +171,16 @@ impl<'a> TestEquation<'a> {
 		}
 		return self.result == accum;
 	}
-	fn is_solvable_recursive(&self) -> bool {
+	fn is_solvable_recursive(&self, support_concat: bool) -> bool {
 		let (first, remainder) = self
 			.numerals
 			.split_first()
 			.expect("Don't know how to test empty equation");
-		return num_reachable_via_add_mul(self.result, *first, remainder);
+		if support_concat {
+			return num_reachable_via_add_mul_concat(self.result, *first, remainder);
+		} else {
+			return num_reachable_via_add_mul(self.result, *first, remainder);
+		}
 	}
 }
 fn num_reachable_via_add_mul(target: DataType, accum: DataType, remainder: &[DataType]) -> bool {
@@ -159,6 +193,27 @@ fn num_reachable_via_add_mul(target: DataType, accum: DataType, remainder: &[Dat
 	let (next_num, next_remainder) = remainder.split_first().expect("Ran out of numbers??");
 	return num_reachable_via_add_mul(target, accum * next_num, next_remainder)
 		|| num_reachable_via_add_mul(target, accum + next_num, next_remainder);
+}
+
+fn num_reachable_via_add_mul_concat(
+	target: DataType,
+	accum: DataType,
+	remainder: &[DataType],
+) -> bool {
+	if target == accum && remainder.is_empty() {
+		return true;
+	}
+	if remainder.is_empty() || accum > target {
+		return false;
+	}
+	let (next_num, next_remainder) = remainder.split_first().expect("Ran out of numbers??");
+	return num_reachable_via_add_mul_concat(target, accum * next_num, next_remainder)
+		|| num_reachable_via_add_mul_concat(target, accum + next_num, next_remainder)
+		|| num_reachable_via_add_mul_concat(
+			target,
+			concat_numeric_op(accum, *next_num),
+			next_remainder,
+		);
 }
 
 fn parser<'a>(
