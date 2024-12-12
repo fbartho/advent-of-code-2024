@@ -1,9 +1,8 @@
+#[allow(dead_code)]
 use crate::prelude::*;
 use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::prelude::*;
-use itertools::repeat_n;
-
-use std::borrow::{Borrow, Cow};
+use std::borrow::Cow;
 #[allow(unused_imports)]
 use std::str::FromStr;
 #[allow(unused_imports)]
@@ -23,18 +22,9 @@ impl Puzzle for Day07 {
 			"{}",
 			equation_list.iter().map(|eq| eq.to_string()).join("\n")
 		);
-		println!("Operator cache building…");
-		let cache = PermutationsCache::new(
-			equation_list
-				.iter()
-				.map(|e| e.numerals.len() - 1)
-				.max()
-				.expect("Must have at least one equation"),
-		);
-		println!("Operator cache constructed");
 		let solvable_equations: Vec<&TestEquation> = equation_list
 			.iter()
-			.filter(|eq| eq.is_solvable(&cache))
+			.filter(|eq| eq.is_solvable_recursive())
 			.collect();
 		let _ = dbg!(solvable_equations.len());
 		println!(
@@ -80,6 +70,7 @@ struct TestEquation<'a> {
 	numerals: Cow<'a, Vec<DataType>>,
 	operators: Cow<'a, Vec<Operator>>,
 }
+#[allow(dead_code)]
 impl<'a> TestEquation<'a> {
 	fn new(result: DataType, numerals: Vec<DataType>) -> Self {
 		Self {
@@ -150,57 +141,25 @@ impl<'a> TestEquation<'a> {
 		}
 		return self.result == accum;
 	}
-	fn is_solvable_permutations(&self, cache: &PermutationsCache) -> bool {
-		match self.numerals.len() {
-			0 => return false,
-			1 => return self.numerals[0] == self.result,
-			_ => {}
-		}
-
-		cache
-			.unique_permutations_of_len(self.numerals.len() - 1)
-			.iter()
-			.map(|ops| {
-				self.clone_with_operators(ops)
-				// self.clone_with_operators(ops.iter()
-				// 	.map(|op| op)
-				// 	.collect::<Vec<Operator>>())
-			})
-			.any(|eq| {
-				if eq.is_valid() {
-					println!("{}", eq.to_string());
-					return true;
-				}
-				return false;
-			})
+	fn is_solvable_recursive(&self) -> bool {
+		let (first, remainder) = self
+			.numerals
+			.split_first()
+			.expect("Don't know how to test empty equation");
+		return num_reachable_via_add_mul(self.result, *first, remainder);
 	}
 }
-struct PermutationsCache {
-	storage: Vec<Vec<Vec<Operator>>>,
-}
-impl PermutationsCache {
-	fn new(up_to_length: usize) -> Self {
-		let mut storage: Vec<Vec<Vec<Operator>>> = Vec::new();
-		for i in 0..up_to_length {
-			storage.push(
-				repeat_n(Operator::Mul, i + 1)
-					.chain(repeat_n(Operator::Add, i + 1))
-					.permutations(i + 1)
-					.unique()
-					.collect::<Vec<_>>(),
-			);
-		}
-		Self { storage }
+fn num_reachable_via_add_mul(target: DataType, accum: DataType, remainder: &[DataType]) -> bool {
+	if target == accum && remainder.is_empty() {
+		return true;
 	}
-	fn unique_permutations_of_len(&self, len: usize) -> &Vec<Vec<Operator>> {
-		self.storage
-			.get(len - 1)
-			.expect("Missing permutation of specific length")
+	if remainder.is_empty() || accum > target {
+		return false;
 	}
+	let (next_num, next_remainder) = remainder.split_first().expect("Ran out of numbers??");
+	return num_reachable_via_add_mul(target, accum * next_num, next_remainder)
+		|| num_reachable_via_add_mul(target, accum + next_num, next_remainder);
 }
-
-// const OP_LIST: LazyCell<Vec<Operator>> = LazyCell::new(|| vec![Operator::Add, Operator::Mul]);
-// Operator::iter().combinations_with_replacement(N)
 
 fn parser<'a>(
 ) -> impl Parser<'a, &'a str, Vec<TestEquation<'a>>, chumsky::extra::Err<Rich<'a, char>>> {
