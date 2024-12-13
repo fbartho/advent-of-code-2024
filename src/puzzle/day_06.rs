@@ -1,11 +1,7 @@
 use crate::prelude::*;
 
 use grid::Grid;
-#[allow(unused_imports)]
-use std::str::FromStr;
-#[allow(unused_imports)]
-use strum::IntoEnumIterator;
-use strum_macros::{Display, EnumIter, EnumString};
+
 pub struct Day06;
 
 impl Puzzle for Day06 {
@@ -64,86 +60,6 @@ impl Puzzle for Day06 {
 
 		Ok(maps_that_loop.len().to_string())
 	}
-}
-
-/// (y, x) to match with grid crate
-type GridCoord2 = (usize, usize);
-
-fn grid_from_vec_vec<I, O>(data: Vec<Vec<I>>) -> Grid<O>
-where
-	I: Into<O> + Clone,
-	O: Default + From<I> + Sized,
-{
-	let mut grid = Grid::new(data.len(), data[0].len());
-	for (y, row) in data.iter().enumerate() {
-		for (x, cell) in row.iter().enumerate() {
-			grid[(y, x)] = O::from(cell.clone());
-		}
-	}
-	grid
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, EnumString, Display, EnumIter)]
-enum TravelDirection {
-	N,
-	NE,
-	E,
-	SE,
-	S,
-	SW,
-	W,
-	NW,
-}
-impl TravelDirection {
-	// fn all() -> Vec<TravelDirection> {
-	// 	TravelDirection::iter().collect()
-	// }
-	// fn cardinal() -> Vec<TravelDirection> {
-	// 	const CARDINAL_PLAN: [TravelDirection; 4] = [
-	// 		TravelDirection::N,
-	// 		TravelDirection::E,
-	// 		TravelDirection::S,
-	// 		TravelDirection::W,
-	// 	];
-	// 	Vec::from(CARDINAL_PLAN)
-	// }
-	fn rt90(&self) -> TravelDirection {
-		match self {
-			TravelDirection::N => TravelDirection::E,
-			TravelDirection::E => TravelDirection::S,
-			TravelDirection::S => TravelDirection::W,
-			TravelDirection::W => TravelDirection::N,
-
-			TravelDirection::NE => TravelDirection::SE,
-			TravelDirection::SE => TravelDirection::SW,
-			TravelDirection::SW => TravelDirection::NW,
-			TravelDirection::NW => TravelDirection::NE,
-		}
-	}
-
-	fn next_coord(&self, coord: GridCoord2) -> Option<GridCoord2> {
-		self.next_coord_with_dist(coord, 1)
-	}
-	fn next_coord_with_dist(&self, (y, x): GridCoord2, distance: usize) -> Option<GridCoord2> {
-		Some(match self {
-			Self::N => (y.checked_sub(distance)?, x),
-			Self::NE => (y.checked_sub(distance)?, x + distance),
-			Self::E => (y, x + distance),
-			Self::SE => (y + distance, x + distance),
-			Self::S => (y + distance, x),
-			Self::SW => (y + distance, x.checked_sub(distance)?),
-			Self::W => (y, x.checked_sub(distance)?),
-			Self::NW => (y.checked_sub(distance)?, x.checked_sub(distance)?),
-		})
-	}
-}
-
-#[derive(Clone)]
-struct FBGrid<T>
-where
-	T: Default + PartialEq,
-{
-	grid: Grid<T>,
 }
 
 #[derive(Debug, Clone, PartialEq, EnumString, Display, Default)]
@@ -405,13 +321,6 @@ impl FBGrid<CellValue> {
 		}
 		return result;
 	}
-	// fn visualize(&self, path: &Vec<GridCoord2>) {
-	// 	let mut visualized = self.clone();
-	// 	path.iter()
-	// 		.for_each(|coord| visualized.grid[*coord] = CellValue::Visited);
-
-	// 	println!("{}", visualized.to_string());
-	// }
 }
 #[test]
 fn sample_day06_1() {

@@ -4,11 +4,6 @@ use ariadne::{Color, Label, Report, ReportKind, Source};
 use chumsky::prelude::*;
 use std::borrow::Borrow;
 use std::borrow::Cow;
-#[allow(unused_imports)]
-use std::str::FromStr;
-#[allow(unused_imports)]
-use strum::IntoEnumIterator;
-use strum_macros::{Display, EnumIter, EnumString};
 
 pub struct Day07;
 

@@ -1,11 +1,5 @@
 use crate::prelude::*;
 use grid::Grid;
-#[allow(unused_imports)]
-use std::str::FromStr;
-#[allow(unused_imports)]
-use std::string::ToString;
-use strum::IntoEnumIterator;
-use strum_macros::{Display, EnumIter, EnumString};
 
 pub struct Day04;
 
@@ -333,69 +327,6 @@ impl FBGrid<CellValue> {
 			.for_each(|(coord, _)| visualized.grid[coord] = CellValue::Unknown);
 
 		println!("{}", visualized.to_string());
-	}
-}
-#[derive(Debug, Clone, Copy, PartialEq, EnumString, Display, EnumIter)]
-enum TravelDirection {
-	N,
-	NE,
-	E,
-	SE,
-	S,
-	SW,
-	W,
-	NW,
-}
-
-impl TravelDirection {
-	fn all() -> Vec<TravelDirection> {
-		TravelDirection::iter().collect()
-	}
-	// fn cardinal() -> Vec<TravelDirection> {
-	//     const CARDINAL_PLAN: [TravelDirection; 4] = [
-	//         TravelDirection::N,
-	//         TravelDirection::E,
-	//         TravelDirection::S,
-	//         TravelDirection::W,
-	//     ];
-	//     Vec::from(CARDINAL_PLAN)
-	// }
-	// fn cross() -> Vec<TravelDirection> {
-	//     const CROSS_PLAN: [TravelDirection; 4] = [
-	//         TravelDirection::NE,
-	//         TravelDirection::SE,
-	//         TravelDirection::SW,
-	//         TravelDirection::NE,
-	//     ];
-	//     Vec::from(CROSS_PLAN)
-	// }
-	// fn next_coord_unchecked(&self, (y, x): GridCoord2) -> GridCoord2 {
-	//     match self {
-	//         Self::N => (y - 1, x),
-	//         Self::NE => (y - 1, x + 1),
-	//         Self::E => (y, x + 1),
-	//         Self::SE => (y + 1, x + 1),
-	//         Self::S => (y + 1, x),
-	//         Self::SW => (y - 1, x - 1),
-	//         Self::W => (y, x - 1),
-	//         Self::NW => (y - 1, x - 1),
-	//     }
-	// }
-
-	fn next_coord(&self, coord: GridCoord2) -> Option<GridCoord2> {
-		self.next_coord_with_dist(coord, 1)
-	}
-	fn next_coord_with_dist(&self, (y, x): GridCoord2, distance: usize) -> Option<GridCoord2> {
-		Some(match self {
-			Self::N => (y.checked_sub(distance)?, x),
-			Self::NE => (y.checked_sub(distance)?, x + distance),
-			Self::E => (y, x + distance),
-			Self::SE => (y + distance, x + distance),
-			Self::S => (y + distance, x),
-			Self::SW => (y + distance, x.checked_sub(distance)?),
-			Self::W => (y, x.checked_sub(distance)?),
-			Self::NW => (y.checked_sub(distance)?, x.checked_sub(distance)?),
-		})
 	}
 }
 #[test]
