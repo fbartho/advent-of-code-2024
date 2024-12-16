@@ -9,13 +9,15 @@ impl Puzzle for Day08 {
 	}
 
 	fn part_one(&self, _input: &str) -> super::PuzzleResult {
-		let radios = RadioMap::new(_input);
+		let radios = RadioMap::new(_input, PuzzlePart::P1);
 		println!("{}", radios.to_string());
 		return Ok(radios.antinode_locations.len().to_string());
 	}
 
 	fn part_two(&self, _input: &str) -> super::PuzzleResult {
-		todo!("implement part two")
+		let radios = RadioMap::new(_input, PuzzlePart::P2);
+		println!("{}", radios.to_string());
+		return Ok(radios.antinode_locations.len().to_string());
 	}
 }
 
@@ -84,6 +86,9 @@ impl FBGrid<CellConfigValue> {
 		if r0 < 0 || r1 < 0 {
 			return None;
 		}
+		if r0 as usize > self.grid.rows() || r1 as usize > self.grid.cols() {
+			return None;
+		}
 		return Some((r0 as usize, r1 as usize));
 	}
 	fn make_antinode_right(
@@ -97,6 +102,9 @@ impl FBGrid<CellConfigValue> {
 		if r0 < 0 || r1 < 0 {
 			return None;
 		}
+		if r0 as usize > self.grid.rows() || r1 as usize > self.grid.cols() {
+			return None;
+		}
 		return Some((r0 as usize, r1 as usize));
 	}
 }
@@ -105,8 +113,12 @@ struct RadioMap {
 	// antenna_locations: HashMap<char, Vec<GridCoord2>>,
 	antinode_locations: Vec<GridCoord2>,
 }
+enum PuzzlePart {
+	P1,
+	P2,
+}
 impl RadioMap {
-	fn new(input: &str) -> Self {
+	fn new(input: &str, part: PuzzlePart) -> Self {
 		let grid = parse_map(input);
 		let mut antenna_locations: HashMap<char, Vec<GridCoord2>> = HashMap::new();
 		let mut antinode_locations: HashSet<GridCoord2> = HashSet::new();
@@ -120,38 +132,84 @@ impl RadioMap {
 			}
 			_ => {}
 		});
-		antenna_locations
-			.values()
-			.map(|locations| {
-				return locations
-					.iter()
-					.combinations(2)
-					.map(|combo| {
-						let dist = grid.distance(combo[0], combo[1]);
-						vec![
-							grid.make_antinode_left(combo[0], combo[1], dist),
-							grid.make_antinode_right(combo[0], combo[1], dist),
-						]
+		match part {
+			PuzzlePart::P1 => {
+				antenna_locations
+					.values()
+					.map(|locations| {
+						return locations
+							.iter()
+							.combinations(2)
+							.map(|combo| {
+								let dist = grid.distance(combo[0], combo[1]);
+								vec![
+									grid.make_antinode_left(combo[0], combo[1], dist),
+									grid.make_antinode_right(combo[0], combo[1], dist),
+								]
+							})
+							.flatten()
+							.filter_map(|n| {
+								if let Some(coord) = n {
+									if let Some(_) = grid.grid.get(coord.0, coord.1) {
+										return n;
+									}
+								}
+								return None;
+							})
+							.collect::<Vec<GridCoord2>>();
 					})
 					.flatten()
-					.filter_map(|n| {
-						if let Some(coord) = n {
-							if let Some(_) = grid.grid.get(coord.0, coord.1) {
-								return n;
-								// if let CellConfigValue::Antenna(_) = cell {
-								// 	return None;
-								// }
-								// return n;
-							}
-						}
-						return None;
+					.for_each(|loc| {
+						antinode_locations.insert(loc);
+					});
+			}
+			PuzzlePart::P2 => {
+				antenna_locations
+					.values()
+					.map(|locations| {
+						return locations
+							.iter()
+							.combinations(2)
+							.map(|combo| {
+								let dist = grid.distance(combo[0], combo[1]).normalize();
+								let mut curr = *combo[0];
+								let mut batch: Vec<GridCoord2> = Vec::new();
+
+								// Include the starting node in the batch as make_antinode_left and make_antinode_right would skip it
+								batch.push(curr);
+								while let Some(next) =
+									grid.make_antinode_left(&curr, combo[1], dist)
+								{
+									batch.push(next);
+									curr = next;
+								}
+
+								// Go to the right from the left starting point to catch points between the antennas
+								curr = *combo[0];
+								while let Some(next) =
+									grid.make_antinode_right(combo[0], &curr, dist)
+								{
+									batch.push(next);
+									curr = next;
+								}
+
+								return batch;
+							})
+							.flatten()
+							.filter_map(|n| {
+								if let Some(_) = grid.grid.get(n.0, n.1) {
+									return Some(n);
+								}
+								return None;
+							})
+							.collect::<Vec<GridCoord2>>();
 					})
-					.collect::<Vec<GridCoord2>>();
-			})
-			.flatten()
-			.for_each(|loc| {
-				antinode_locations.insert(loc);
-			});
+					.flatten()
+					.for_each(|loc| {
+						antinode_locations.insert(loc);
+					});
+			}
+		}
 
 		return Self {
 			grid,
@@ -187,4 +245,23 @@ fn sample_day08_1() {
 ............
 "#;
 	println!("{:?}", Day08.part_one(input).unwrap());
+}
+
+#[test]
+fn sample_day08_2() {
+	let input = r#"
+............
+........0...
+.....0......
+.......0....
+....0.......
+......A.....
+............
+............
+........A...
+.........A..
+............
+............
+"#;
+	println!("{:?}", Day08.part_two(input).unwrap());
 }

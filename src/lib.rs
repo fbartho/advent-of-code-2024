@@ -69,6 +69,31 @@ pub type GridCoord2 = (usize, usize);
 /// (vertical, horizontal) to be consistent with GridCoord2
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GridDistance2<T>(T, T);
+impl GridDistance2<i32> {
+	pub fn normalize(&self) -> GridDistance2<i32>
+// where
+	// 	T: Sized
+	// 		+ From<T>
+	// 		+ From<std::num::NonZero<T>>
+	// 		+ Copy
+	// 		+ std::ops::Div<Output = T>
+	// 		+ std::ops::Rem<Output = T>
+	// 		+ std::cmp::PartialOrd,
+	{
+		if self.0 <= self.1 {
+			if self.1 % self.0 == 0 {
+				return GridDistance2(self.0 / self.0, self.1 / self.0);
+			} else {
+				return *self;
+			}
+		} else {
+			if self.0 % self.1 == 0 {
+				return GridDistance2(self.0 / self.1, self.1 / self.1);
+			}
+			return *self;
+		}
+	}
+}
 #[derive(
 	Debug,
 	Clone,
@@ -209,5 +234,3 @@ where
 		return Some((row.into(), col.into()));
 	}
 }
-// impl<T> FBGrid<T> {
-// }
