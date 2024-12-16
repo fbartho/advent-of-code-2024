@@ -4,11 +4,8 @@ pub use crate::Puzzle;
 pub use anyhow::Error;
 pub use itertools::Itertools;
 
-pub use crate::grid_from_vec_vec;
 #[allow(unused_imports)]
-pub use crate::FBGrid;
-pub use crate::GridCoord2;
-pub use crate::TravelDirection;
+pub use crate::{grid_from_vec_vec, FBGrid, GridCoord2, GridDistance2, TravelDirection};
 
 #[allow(unused_imports)]
 pub use std::str::FromStr;

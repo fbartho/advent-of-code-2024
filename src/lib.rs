@@ -66,6 +66,9 @@ impl Commands {
 use strum::IntoEnumIterator;
 /// (y, x) to match with grid crate
 pub type GridCoord2 = (usize, usize);
+/// (vertical, horizontal) to be consistent with GridCoord2
+#[derive(Clone, Copy, Debug, Default)]
+pub struct GridDistance2<T>(T, T);
 #[derive(
 	Debug,
 	Clone,
@@ -160,6 +163,51 @@ where
 	T: Default + PartialEq,
 {
 	grid: Grid<T>,
+}
+impl<CellType> FBGrid<CellType>
+where
+	CellType: Default + PartialEq,
+{
+	pub fn distance_generic<T>(a: &GridCoord2, b: &GridCoord2) -> GridDistance2<T>
+	where
+		T: From<usize> + std::ops::Sub<Output = T>,
+	{
+		// Small is upwards, and to the left
+		let a0: T = a.0.into();
+		let a1: T = a.1.into();
+		let b0: T = b.0.into();
+		let b1: T = b.1.into();
+		return GridDistance2(b0 - a0, b1 - a1);
+	}
+	pub fn distance(&self, a: &GridCoord2, b: &GridCoord2) -> GridDistance2<i32>
+// where
+	// 	T: From<usize> + std::ops::Sub<Output = T>,
+	{
+		// Small is upwards, and to the left
+		let a0: i32 = a.0 as i32;
+		let a1: i32 = a.1 as i32;
+		let b0: i32 = b.0 as i32;
+		let b1: i32 = b.1 as i32;
+		return GridDistance2(b0 - a0, b1 - a1);
+	}
+
+	pub fn travel<T>(&self, coord: GridCoord2, distance: GridDistance2<T>) -> Option<GridCoord2>
+	where
+		T: From<usize> + Into<usize> + std::ops::Add<Output = T> + std::cmp::PartialOrd<T>,
+	{
+		let coord0: T = coord.0.into();
+		let coord1: T = coord.1.into();
+		let (row, col) = (coord0 + distance.0, coord1 + distance.1);
+		if row < 0.into()
+			|| col < 0.into()
+			|| row >= self.grid.rows().into()
+			|| col >= self.grid.cols().into()
+		{
+			return None;
+		}
+
+		return Some((row.into(), col.into()));
+	}
 }
 // impl<T> FBGrid<T> {
 // }
